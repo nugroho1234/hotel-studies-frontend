@@ -3,7 +3,8 @@ import { useAuth } from '../auth/AuthProvider'
 import { SETS, type SetName } from '../split/api'
 import { isComplete } from '../split/splitting'
 import { add, compare, score, type Counts } from '../stats/agreement'
-import { KappaPanel, LabellingPanel } from './StaffLabelling'
+import { KappaPanel, LabellingPanel, currentRound, devKappaFailed } from './StaffLabelling'
+import { RoundsPanel } from './StaffRounds'
 import { loadStaffData, setSetOpen, unlockSet, type Meta, type StaffData } from '../stats/api'
 
 const LANG: Record<string, string> = { id: 'Indonesian', en: 'English' }
@@ -30,11 +31,12 @@ export default function StaffHome() {
 
   const calc = useMemo(() => {
     if (!d) return null
+    const curRound = Math.max(1, ...d.meta.filter((m) => m.set === 'dev').map((m) => m.round ?? 1))
     const done = (c: string, m: Meta) => isComplete(m.body, d.splits[c]?.[m.reviewId] ?? [])
     const progress = d.coders.map((c) => ({
       coder: c,
       sets: SETS.map((s) => {
-        const rs = d.meta.filter((m) => m.set === s.name)
+        const rs = d.meta.filter((m) => m.set === s.name && (m.set !== 'dev' || m.round === curRound))
         return { set: s.name, total: rs.length, complete: rs.filter((m) => done(c.id, m)).length, finished: rs.length > 0 && rs.every((m) => d.finished[c.id]?.[m.reviewId]) }
       }),
     }))
@@ -76,7 +78,7 @@ export default function StaffHome() {
           <li key={s.name}>
             <div>
               <strong>{s.label}: {d.open[s.name] ? 'open' : 'closed'}</strong>
-              <span>{d.meta.filter((m) => m.set === s.name).length} reviews. {s.hint}</span>
+              <span>{d.meta.filter((m) => m.set === s.name && (m.set !== 'dev' || m.round === currentRound(d))).length} reviews. {s.hint}</span>
             </div>
             {isLead && (
               <button className="btn" disabled={busy}
@@ -142,6 +144,7 @@ export default function StaffHome() {
       <p className="note">A dash means there were no boundaries to compare yet.</p>
 
       <LabellingPanel d={d} isLead={isLead} busy={busy} act={act} />
+      <RoundsPanel isLead={isLead} busy={busy} act={act} kappaFailed={devKappaFailed(d)} version={d.meta.length} />
       <KappaPanel d={d} />
     </section>
   )

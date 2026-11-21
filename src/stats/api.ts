@@ -2,7 +2,7 @@ import { supabase } from '../lib/supabase'
 import type { Phrase } from '../split/splitting'
 import type { SetName } from '../split/api'
 
-export type Meta = { reviewId: number; lang: string; set: SetName; isSupp: boolean; body: string }
+export type Meta = { reviewId: number; lang: string; set: SetName; isSupp: boolean; body: string; round: number | null }
 export type AgreedPhrase = { phraseId: number; reviewId: number; start: number; end: number; text: string }
 export type Lab = { dimension: string; sentiment: string }
 export type Coder = { id: string; name: string }
@@ -16,7 +16,7 @@ export type StaffData = {
   labels: Record<string, Record<number, Lab>> // coder id -> phrase id -> label
   labelFinished: Record<string, Record<number, true>> // coder id -> review id
   labelOpen: Record<string, boolean>
-  gold: Record<number, Lab & { byCoders: boolean }> // phrase id -> agreed label
+  gold: Record<number, Lab & { byCoders: boolean; version: string | null }> // phrase id -> agreed label
 }
 
 // The API returns at most 1,000 rows per request, so read in pages.
@@ -45,8 +45,8 @@ export async function loadStaffData(): Promise<StaffData> {
       supabase.from('human_labels').select('phrase_id,coder,dimension,sentiment').order('phrase_id').range(f, t)),
     all<{ review_id: number; coder: string }>((f, t) => supabase.from('label_submissions').select('review_id,coder').order('review_id').range(f, t)),
     supabase.from('label_access').select('set_name,is_open'),
-    all<{ phrase_id: number; dimension: string; sentiment: string; by_coders: boolean }>((f, t) =>
-      supabase.from('gold_labels').select('phrase_id,dimension,sentiment,by_coders').order('phrase_id').range(f, t)),
+    all<{ phrase_id: number; dimension: string; sentiment: string; by_coders: boolean; codebook_version: string | null }>((f, t) =>
+      supabase.from('gold_labels').select('phrase_id,dimension,sentiment,by_coders,codebook_version').order('phrase_id').range(f, t)),
   ])
   if (meta.error) throw meta.error
   if (coders.error) throw coders.error
@@ -57,8 +57,8 @@ export async function loadStaffData(): Promise<StaffData> {
   const f: StaffData['finished'] = {}
   for (const r of subs) (f[r.coder] ??= {})[r.review_id] = true
   return {
-    meta: (meta.data ?? []).map((r: { review_id: number; lang: string; set_name: SetName; is_supp: boolean; body: string }) => ({
-      reviewId: r.review_id, lang: r.lang, set: r.set_name, isSupp: r.is_supp, body: r.body,
+    meta: (meta.data ?? []).map((r: { review_id: number; lang: string; set_name: SetName; is_supp: boolean; body: string; dev_round: number | null }) => ({
+      reviewId: r.review_id, lang: r.lang, set: r.set_name, isSupp: r.is_supp, body: r.body, round: r.dev_round,
     })),
     coders: (coders.data ?? []).map((c) => ({ id: c.user_id, name: c.display_name })),
     splits: s,
@@ -68,7 +68,7 @@ export async function loadStaffData(): Promise<StaffData> {
     labels: labs.reduce<StaffData['labels']>((o, r) => ((o[r.coder] ??= {})[r.phrase_id] = { dimension: r.dimension, sentiment: r.sentiment }, o), {}),
     labelFinished: lsubs.reduce<StaffData['labelFinished']>((o, r) => ((o[r.coder] ??= {})[r.review_id] = true, o), {}),
     labelOpen: Object.fromEntries((lacc.data ?? []).map((a) => [a.set_name, a.is_open as boolean])),
-    gold: Object.fromEntries(gold.map((g) => [g.phrase_id, { dimension: g.dimension, sentiment: g.sentiment, byCoders: g.by_coders }])),
+    gold: Object.fromEntries(gold.map((g) => [g.phrase_id, { dimension: g.dimension, sentiment: g.sentiment, byCoders: g.by_coders, version: g.codebook_version }])),
   }
 }
 
@@ -132,4 +132,44 @@ export async function lastLabelDecision(phraseId: number): Promise<{ reason: str
   const { data, error } = await supabase.from('label_adjudication_log').select('reason,codebook_gap,decided_at').eq('phrase_id', phraseId).order('decided_at', { ascending: false }).limit(1)
   if (error) throw error
   return data?.[0] ? { reason: data[0].reason, gap: data[0].codebook_gap, at: data[0].decided_at } : null
+}
+
+export type CodebookVersion = { version: string; createdAt: string; note: string; body: string | null }
+export type RoundStatus = {
+  round: number; roundVersion: string; currentVersion: string; newerCodebook: boolean; reserve: number; codersFinished: number
+  rounds: { round: number; version: string; at: string; reason: string }[]
+}
+
+export async function codebookList(): Promise<CodebookVersion[]> {
+  const { data, error } = await supabase.rpc('codebook_list')
+  if (error) throw error
+  return (data ?? []).map((r: { version: string; created_at: string; change_log: string; body: string | null }) => ({ version: r.version, createdAt: r.created_at, note: r.change_log, body: r.body }))
+}
+
+export async function uploadCodebook(version: string, body: string, note: string): Promise<void> {
+  const { error } = await supabase.rpc('upload_codebook', { p_version: version, p_body: body, p_note: note })
+  if (error) throw error
+}
+
+export async function devRoundStatus(): Promise<RoundStatus> {
+  const { data, error } = await supabase.rpc('dev_round_status')
+  if (error) throw error
+  return data as RoundStatus
+}
+
+export async function drawDevRound(reason: string): Promise<number> {
+  const { data, error } = await supabase.rpc('draw_dev_round', { p_reason: reason })
+  if (error) throw error
+  return data as number
+}
+
+export async function reconfirmGold(phrase: number, dimension: string, sentiment: string, reason: string): Promise<void> {
+  const { error } = await supabase.rpc('reconfirm_gold', { p_phrase: phrase, p_dimension: dimension, p_sentiment: sentiment, p_reason: reason })
+  if (error) throw error
+}
+
+export async function reconfirmAllGold(reason: string): Promise<number> {
+  const { data, error } = await supabase.rpc('reconfirm_all_gold', { p_reason: reason })
+  if (error) throw error
+  return data as number
 }

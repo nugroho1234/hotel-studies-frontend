@@ -12,6 +12,31 @@ const SETS = [
   { name: 'test' as const, label: 'Test' },
 ]
 
+export const currentRound = (d: StaffData) => Math.max(1, ...d.meta.filter((m) => m.set === 'dev').map((m) => m.round ?? 1))
+const CODES = DIMENSIONS.map((x) => x.code)
+
+/** Phrases both coders finished labelling (for dev, only those of the given round). */
+function unitsOf(d: StaffData, info: Map<number, StaffData['meta'][number]>, a: string, b: string, pick: (set: string, supp: boolean) => boolean, lang: string, round: number | null): LabelPair[] {
+  return d.agreedPhrases.flatMap((p) => {
+    const m = info.get(p.reviewId)
+    const la = d.labels[a]?.[p.phraseId]
+    const lb = d.labels[b]?.[p.phraseId]
+    if (!m || m.lang !== lang || !pick(m.set, m.isSupp) || (round !== null && (m.round ?? 1) !== round) || !la || !lb || !d.labelFinished[a]?.[p.reviewId] || !d.labelFinished[b]?.[p.reviewId]) return []
+    return [{ a: la, b: lb }]
+  })
+}
+
+/** True when some coder pair has been compared on the current development round and misses the minimum in a language. */
+export function devKappaFailed(d: StaffData): boolean {
+  const info = new Map(d.meta.map((m) => [m.reviewId, m]))
+  const round = currentRound(d)
+  const langs = [...new Set(d.meta.map((m) => m.lang))]
+  return d.coders.some((a, i) => d.coders.slice(i + 1).some((b) => {
+    const four = langs.flatMap((l) => { const r = labelAgreement(unitsOf(d, info, a.id, b.id, (s, sp) => s === 'dev' && !sp, l, round), CODES); return [r.dimension, r.sentiment] })
+    return four.length > 0 && four.every((k) => k !== null) && four.some((k) => (k as number) < MIN)
+  }))
+}
+
 type Act = (fn: () => Promise<unknown>, ask: string) => void
 
 /** Open or close labelling per set, and each coder's labelling progress. */
@@ -76,14 +101,8 @@ export function KappaPanel({ d }: { d: StaffData }) {
   const pairs = useMemo(() => d.coders.flatMap((a, i) => d.coders.slice(i + 1).map((b) => ({ a, b }))), [d.coders])
   const langs = useMemo(() => [...new Set(d.meta.map((m) => m.lang))].sort(), [d.meta])
 
-  const units = (a: string, b: string, pick: (set: string, supp: boolean) => boolean, lang: string): LabelPair[] =>
-    d.agreedPhrases.flatMap((p) => {
-      const m = info.get(p.reviewId)
-      const la = d.labels[a]?.[p.phraseId]
-      const lb = d.labels[b]?.[p.phraseId]
-      if (!m || m.lang !== lang || !pick(m.set, m.isSupp) || !la || !lb || !d.labelFinished[a]?.[p.reviewId] || !d.labelFinished[b]?.[p.reviewId]) return []
-      return [{ a: la, b: lb }]
-    })
+  const curRound = currentRound(d)
+  const units = (a: string, b: string, pick: (set: string, supp: boolean) => boolean, lang: string, dev = false) => unitsOf(d, info, a, b, pick, lang, dev ? curRound : null)
 
   return (
     <>
@@ -94,14 +113,14 @@ export function KappaPanel({ d }: { d: StaffData }) {
       </p>
       {pairs.length === 0 && <p>At least two coders are needed.</p>}
       {pairs.map(({ a, b }) => {
-        const dev = langs.map((l) => ({ l, r: labelAgreement(units(a.id, b.id, (s, sp) => s === 'dev' && !sp, l), DIMENSIONS.map((x) => x.code)) }))
+        const dev = langs.map((l) => ({ l, r: labelAgreement(units(a.id, b.id, (s, sp) => s === 'dev' && !sp, l, true), DIMENSIONS.map((x) => x.code)) }))
         const test = langs.map((l) => ({ l, r: labelAgreement(units(a.id, b.id, (s, sp) => s === 'test' && !sp, l), DIMENSIONS.map((x) => x.code)) }))
         const supp = langs.map((l) => ({ l, r: labelAgreement(units(a.id, b.id, (_s, sp) => sp, l), DIMENSIONS.map((x) => x.code)) }))
         const four = dev.flatMap(({ r }) => [r.dimension, r.sentiment])
         const ready = four.length > 0 && four.every((k) => k !== null)
         const met = ready && four.every((k) => (k as number) >= MIN)
         const rows = [
-          ...dev.map((x) => ({ label: `Development, ${LANG[x.l] ?? x.l}`, ...x, check: true })),
+          ...dev.map((x) => ({ label: `Development round ${curRound}, ${LANG[x.l] ?? x.l}`, ...x, check: true })),
           ...test.filter((x) => x.r.n > 0).map((x) => ({ label: `Test (benchmark), ${LANG[x.l] ?? x.l}`, ...x, check: false })),
           ...supp.filter((x) => x.r.n > 0).map((x) => ({ label: `Reliability supplement, ${LANG[x.l] ?? x.l}`, ...x, check: false })),
         ]

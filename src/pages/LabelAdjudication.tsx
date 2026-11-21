@@ -1,10 +1,10 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { DIMENSIONS, SENTIMENTS } from '../label/scheme'
 import { segmentsOf } from '../split/splitting'
-import { acceptIdenticalLabels, lastLabelDecision, loadStaffData, saveLabelAdjudication, type Lab, type StaffData } from '../stats/api'
+import { acceptIdenticalLabels, devRoundStatus, lastLabelDecision, loadStaffData, reconfirmAllGold, reconfirmGold, saveLabelAdjudication, type Lab, type StaffData } from '../stats/api'
 
 type SetKey = 'dev' | 'test'
-type Filter = 'todo' | 'decided' | 'same'
+type Filter = 'todo' | 'decided' | 'same' | 'redo'
 const SET_LABEL: Record<SetKey, string> = { dev: 'Development', test: 'Test' }
 const dimName = (c: string) => DIMENSIONS.find((d) => d.code === c)?.name ?? c
 const sentName = (c: string) => SENTIMENTS.find((s) => s.code === c)?.name ?? c
@@ -24,11 +24,13 @@ export default function LabelAdjudication() {
   const [sent, setSent] = useState('')
   const [reason, setReason] = useState('')
   const [gap, setGap] = useState(false)
+  const [cv, setCv] = useState('')
   const [last, setLast] = useState<{ reason: string; gap: boolean; at: string } | null>(null)
 
   const load = useCallback(async () => {
     try {
-      const data = await loadStaffData()
+      const [data, st] = await Promise.all([loadStaffData(), devRoundStatus()])
+      setCv(st.currentVersion)
       setD(data)
       const fin = (id: string) => data.labelFinished[id] !== undefined
       setA((x) => x || (data.coders.find((c) => fin(c.id)) ?? data.coders[0])?.id || '')
@@ -52,8 +54,10 @@ export default function LabelAdjudication() {
   const todo = rows.filter((r) => !r.same && !r.decided)
   const decided = rows.filter((r) => !r.same && r.decided)
   const same = rows.filter((r) => r.same)
+  const outdated = (r: (typeof rows)[number]) => r.decided && d?.gold[r.p.phraseId]?.version !== cv
+  const redo = cv ? rows.filter(outdated) : []
   const sameOpen = same.filter((r) => !r.decided).length
-  const shown = filter === 'todo' ? todo : filter === 'decided' ? decided : same
+  const shown = filter === 'todo' ? todo : filter === 'decided' ? decided : filter === 'redo' ? redo : same
   const cur = rows.find((r) => r.p.phraseId === sel)
 
   const choose = (id: number | null) => {
@@ -113,10 +117,17 @@ export default function LabelAdjudication() {
         <p><button className="btn" disabled={busy || !pairOk} onClick={() => run(() => acceptIdenticalLabels(set, a, b))}>Accept {sameOpen} identical {sameOpen === 1 ? 'label' : 'labels'}</button></p>
       )}
 
+      {redo.length > 0 && (
+        <p className="note">
+          {redo.length} gold labels were decided under an earlier codebook version. Confirm or change each one under v{cv} (tab Re-confirm), or keep all of them as they are.{' '}
+          <button className="btn" disabled={busy} onClick={() => { const r = window.prompt(`Keep all ${redo.length} gold labels unchanged under v${cv}. Reason:`)?.trim(); if (r) run(() => reconfirmAllGold(r)) }}>Keep all unchanged</button>
+        </p>
+      )}
+
       <div className="adj-grid">
         <div>
           <div className="tabs" role="tablist" aria-label="Phrases">
-            {([['todo', `To decide (${todo.length})`], ['decided', `Decided (${decided.length})`], ['same', `Identical (${same.length})`]] as [Filter, string][]).map(([k, t]) => (
+            {([['todo', `To decide (${todo.length})`], ['decided', `Decided (${decided.length})`], ['same', `Identical (${same.length})`], ['redo', `Re-confirm (${redo.length})`]] as [Filter, string][]).map(([k, t]) => (
               <button key={k} role="tab" aria-selected={filter === k} className={filter === k ? 'tab on' : 'tab'} onClick={() => setFilter(k)}>{t}</button>
             ))}
           </div>
@@ -145,7 +156,7 @@ export default function LabelAdjudication() {
               <p><strong>{name(a)}:</strong> {show(cur.la)}</p>
               <p><strong>{name(b)}:</strong> {show(cur.lb)}</p>
 
-              <h2 className="who2">Gold label{cur.decided ? '' : ' (not saved yet)'}</h2>
+              <h2 className="who2">Gold label{cur.decided ? (outdated(cur) ? ` (decided under v${d.gold[cur.p.phraseId].version ?? '?'}, confirm under v${cv})` : '') : ' (not saved yet)'}</h2>
               <div className="actions">
                 <button className="btn" onClick={() => { setDim(cur.la.dimension); setSent(cur.la.sentiment) }}>Use {name(a)}'s</button>
                 <button className="btn" onClick={() => { setDim(cur.lb.dimension); setSent(cur.lb.sentiment) }}>Use {name(b)}'s</button>
@@ -173,10 +184,10 @@ export default function LabelAdjudication() {
               {last && <p className="note">Last decision: {last.reason}{last.gap ? ' (codebook gap)' : ''} ({new Date(last.at).toLocaleDateString()})</p>}
               <button className="btn primary" disabled={!canSave || busy}
                 onClick={() => run(async () => {
-                  await saveLabelAdjudication(cur.p.phraseId, a, b, dim, sent, reason, gap)
+                  await (outdated(cur) ? reconfirmGold(cur.p.phraseId, dim, sent, reason) : saveLabelAdjudication(cur.p.phraseId, a, b, dim, sent, reason, gap))
                   choose(todo.find((r) => r.p.phraseId !== cur.p.phraseId)?.p.phraseId ?? null)
                 })}>
-                Save decision
+                {outdated(cur) ? `Confirm under v${cv}` : 'Save decision'}
               </button>
             </>
           )}
