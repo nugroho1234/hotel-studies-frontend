@@ -230,3 +230,11 @@ mark.m5 { background: var(--m5); }
 .chip input { position: absolute; opacity: 0; width: 1px; height: 1px; }
 .chip:has(input:focus-visible) { outline: 3px solid var(--action); outline-offset: 2px; }
 .chip.on { background: var(--ink); border-color: var(--ink); color: #fff; font-weight: 700; }
+.stats td.flag { color: var(--danger); font-weight: 700; }
+.staff h4 { margin: 1.2rem 0 0.3rem; font-size: 0.98rem; }
+.check { display: flex; gap: 0.5rem; align-items: flex-start; margin: 0.5rem 0 1rem; max-width: 40rem; }
+.check input { margin-top: 0.3rem; }
+.staff .ok { color: var(--action); font-weight: 700; }
+.modes { margin-bottom: 1.2rem; }
+.chips { border: 0; padding: 0; margin: 0.6rem 0; display: flex; flex-wrap: wrap; gap: 0.35rem; align-items: center; }
+.chips legend { float: left; width: 5.5rem; padding: 0; font-weight: 700; font-size: 0.9rem; }

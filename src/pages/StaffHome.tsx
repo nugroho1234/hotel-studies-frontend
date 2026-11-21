@@ -3,6 +3,7 @@ import { useAuth } from '../auth/AuthProvider'
 import { SETS, type SetName } from '../split/api'
 import { isComplete } from '../split/splitting'
 import { add, compare, score, type Counts } from '../stats/agreement'
+import { KappaPanel, LabellingPanel } from './StaffLabelling'
 import { loadStaffData, setSetOpen, unlockSet, type Meta, type StaffData } from '../stats/api'
 
 const LANG: Record<string, string> = { id: 'Indonesian', en: 'English' }
@@ -19,11 +20,11 @@ export default function StaffHome() {
   const load = useCallback(() => loadStaffData().then(setD, () => setErr('Could not load the data. Reload the page to try again.')), [])
   useEffect(() => { load() }, [load])
 
-  const act = async (fn: () => Promise<void>, ask: string) => {
+  const act = async (fn: () => Promise<unknown>, ask: string) => {
     if (!window.confirm(ask)) return
     setBusy(true)
     setErr('')
-    try { await fn(); await load() } catch { setErr('That did not work. Only the lead researcher can change sets.') }
+    try { await fn(); await load() } catch (e) { setErr(`That did not work: ${(e as { message?: string })?.message ?? 'only the lead researcher can change this'}`) }
     setBusy(false)
   }
 
@@ -139,6 +140,9 @@ export default function StaffHome() {
         </Fragment>
       ))}
       <p className="note">A dash means there were no boundaries to compare yet.</p>
+
+      <LabellingPanel d={d} isLead={isLead} busy={busy} act={act} />
+      <KappaPanel d={d} />
     </section>
   )
 }

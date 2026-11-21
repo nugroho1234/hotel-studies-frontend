@@ -1,6 +1,6 @@
 import { NavLink, Outlet } from 'react-router-dom'
 import { useAuth } from '../auth/AuthProvider'
-import { ROLE_LABEL, homeFor, isStaff } from '../auth/roles'
+import { ROLE_LABEL, homeFor } from '../auth/roles'
 
 export default function AppShell() {
   const { profile, signOut } = useAuth()
@@ -19,7 +19,7 @@ export default function AppShell() {
           {profile.role === 'coder' && (
             <NavLink to="/label" className={({ isActive }) => (isActive ? 'navlink active' : 'navlink')}>Labelling</NavLink>
           )}
-          {isStaff(profile.role) && (
+          {profile.role === 'lead' && (
             <NavLink to="/adjudicate" className={({ isActive }) => (isActive ? 'navlink active' : 'navlink')}>Adjudication</NavLink>
           )}
           {profile.role !== 'expert' && (

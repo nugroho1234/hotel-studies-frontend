@@ -2,13 +2,14 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useAuth } from '../auth/AuthProvider'
 import PhraseEditor, { PhraseView } from '../split/PhraseEditor'
 import { isComplete, sameSplit, type Phrase } from '../split/splitting'
+import LabelAdjudication from './LabelAdjudication'
 import { acceptIdentical, lastDecision, loadAgreed, loadStaffData, saveAdjudication, type StaffData } from '../stats/api'
 
 type SetKey = 'dev' | 'test'
 type Filter = 'todo' | 'decided' | 'same'
 const SET_LABEL: Record<SetKey, string> = { dev: 'Development', test: 'Test' }
 
-export default function Adjudication() {
+function SplitAdjudication() {
   const { profile } = useAuth()
   const isLead = profile?.role === 'lead'
   const [d, setD] = useState<StaffData | null>(null)
@@ -22,6 +23,7 @@ export default function Adjudication() {
   const [sel, setSel] = useState<number | null>(null)
   const [draft, setDraft] = useState<Phrase[]>([])
   const [reason, setReason] = useState('')
+  const [gap, setGap] = useState(false)
   const [last, setLast] = useState<{ reason: string; at: string } | null>(null)
 
   const load = useCallback(async () => {
@@ -56,6 +58,7 @@ export default function Adjudication() {
   const choose = (id: number | null) => {
     setSel(id)
     setReason('')
+    setGap(false)
     setLast(null)
     const r = rows.find((x) => x.m.reviewId === id)
     setDraft(r ? agreed[r.m.reviewId] ?? r.sa : [])
@@ -147,8 +150,9 @@ export default function Adjudication() {
                   <label className="reason">Reason for the decision
                     <textarea rows={2} value={reason} onChange={(e) => setReason(e.target.value)} placeholder="For example: codebook rule 3, a new clause starts after the emoji." />
                   </label>
+                  <label className="check"><input type="checkbox" checked={gap} onChange={(e) => setGap(e.target.checked)} /> The codebook does not settle this case (log as a codebook gap)</label>
                   {last && <p className="note">Last decision: {last.reason} ({new Date(last.at).toLocaleDateString()})</p>}
-                  <button className="btn primary" disabled={!canSave || busy} onClick={() => run(async () => { await saveAdjudication(cur.m.reviewId, a, b, draft, reason); const next = todo.find((r) => r.m.reviewId !== cur.m.reviewId); choose(next?.m.reviewId ?? null) })}>
+                  <button className="btn primary" disabled={!canSave || busy} onClick={() => run(async () => { await saveAdjudication(cur.m.reviewId, a, b, draft, reason, gap); const next = todo.find((r) => r.m.reviewId !== cur.m.reviewId); choose(next?.m.reviewId ?? null) })}>
                     Save decision
                   </button>
                 </>
@@ -163,5 +167,19 @@ export default function Adjudication() {
         </div>
       </div>
     </section>
+  )
+}
+
+export default function Adjudication() {
+  const [mode, setMode] = useState<'splits' | 'labels'>('splits')
+  return (
+    <>
+      <div className="tabs modes" role="tablist" aria-label="What to adjudicate">
+        {([['splits', 'Splits'], ['labels', 'Labels']] as const).map(([k, t]) => (
+          <button key={k} role="tab" aria-selected={mode === k} className={mode === k ? 'tab on' : 'tab'} onClick={() => setMode(k)}>{t}</button>
+        ))}
+      </div>
+      {mode === 'splits' ? <SplitAdjudication /> : <LabelAdjudication />}
+    </>
   )
 }

@@ -54,6 +54,8 @@ export default function App() {
           </Route>
           <Route element={<Guard allow={isStaff} />}>
             <Route path="/dashboard" element={<StaffHome />} />
+          </Route>
+          <Route element={<Guard allow={(r) => r === 'lead'} />}>
             <Route path="/adjudicate" element={<Adjudication />} />
           </Route>
           <Route element={<Guard allow={(r) => r === 'expert'} />}>
