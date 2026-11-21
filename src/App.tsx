@@ -3,7 +3,9 @@ import { useAuth } from './auth/AuthProvider'
 import { homeFor, isStaff, type Role } from './auth/roles'
 import AppShell from './layout/AppShell'
 import Codebook from './pages/Codebook'
-import { CoderHome, ExpertHome, StaffHome } from './pages/Homes'
+import CoderHome from './pages/CoderHome'
+import { ExpertHome, StaffHome } from './pages/Homes'
+import SplitScreen from './pages/SplitScreen'
 import Login from './pages/Login'
 
 function Splash({ children }: { children: string }) {
@@ -42,6 +44,7 @@ export default function App() {
         <Route element={<AppShell />}>
           <Route element={<Guard allow={(r) => r === 'coder'} />}>
             <Route path="/split" element={<CoderHome />} />
+            <Route path="/split/:set" element={<SplitScreen />} />
           </Route>
           <Route element={<Guard allow={isStaff} />}>
             <Route path="/dashboard" element={<StaffHome />} />

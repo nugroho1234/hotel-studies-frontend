@@ -1,15 +1,3 @@
-export function CoderHome() {
-  return (
-    <section className="page">
-      <h1>Splitting</h1>
-      <p>No review set is open yet. The lead researcher opens each set when it is ready, and it will appear here.</p>
-      <p>
-        Until then, read the <a href="/codebook" target="_blank" rel="noopener noreferrer">splitting rules</a>.
-      </p>
-    </section>
-  )
-}
-
 export function StaffHome() {
   return (
     <section className="page">
