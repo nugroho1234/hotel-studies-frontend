@@ -4,6 +4,8 @@ import {
   hasContent,
   isComplete,
   phraseText,
+  sameSplit,
+  segmentsOf,
   snapSelection,
   uncoveredWords,
   utf16ToCodePoint,
@@ -150,5 +152,20 @@ describe('coverage', () => {
 
   it('treats an empty or blank review as not complete', () => {
     expect(isComplete('   ', [])).toBe(false)
+  })
+})
+
+describe('segmentsOf and sameSplit', () => {
+  it('cuts text into gaps and phrases', () => {
+    expect(segmentsOf(26, [{ start: 16, end: 26 }, { start: 0, end: 15 }])).toEqual([
+      { start: 0, end: 15, n: 0 },
+      { start: 15, end: 16, n: null },
+      { start: 16, end: 26, n: 1 },
+    ])
+    expect(segmentsOf(5, [])).toEqual([{ start: 0, end: 5, n: null }])
+  })
+  it('compares splits regardless of order', () => {
+    expect(sameSplit([{ start: 16, end: 26 }, { start: 0, end: 15 }], [{ start: 0, end: 15 }, { start: 16, end: 26 }])).toBe(true)
+    expect(sameSplit([{ start: 0, end: 26 }], [{ start: 0, end: 15 }, { start: 16, end: 26 }])).toBe(false)
   })
 })

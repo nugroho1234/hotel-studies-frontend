@@ -83,3 +83,24 @@ export function hasContent(text: string, p: Phrase): boolean {
 export function isComplete(text: string, phrases: Phrase[]): boolean {
   return words(Array.from(text)).length > 0 && uncoveredWords(text, phrases).length === 0
 }
+
+export type Segment = { start: number; end: number; n: number | null } // n = phrase index, null = text outside any phrase
+
+/** Cut the text into alternating gaps and phrases, for drawing. */
+export function segmentsOf(length: number, phrases: Phrase[]): Segment[] {
+  const out: Segment[] = []
+  let at = 0
+  ;[...phrases].sort((a, b) => a.start - b.start).forEach((p, n) => {
+    if (p.start > at) out.push({ start: at, end: p.start, n: null })
+    out.push({ start: p.start, end: p.end, n })
+    at = p.end
+  })
+  if (at < length) out.push({ start: at, end: length, n: null })
+  return out
+}
+
+/** Same phrases at the same offsets. */
+export function sameSplit(a: Phrase[], b: Phrase[]): boolean {
+  const key = (ps: Phrase[]) => [...ps].sort((x, y) => x.start - y.start).map((p) => `${p.start}-${p.end}`).join(',')
+  return key(a) === key(b)
+}

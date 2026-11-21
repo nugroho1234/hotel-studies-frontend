@@ -60,3 +60,28 @@ export async function unlockSet(coder: string, set: SetName): Promise<void> {
   const { error } = await supabase.rpc('unlock_set', { p_coder: coder, p_set: set })
   if (error) throw error
 }
+
+export async function loadAgreed(): Promise<Record<number, Phrase[]>> {
+  const rows = await all<{ review_id: number; start_offset: number; end_offset: number }>((f, t) =>
+    supabase.from('agreed_phrases').select('review_id,start_offset,end_offset').order('phrase_id').range(f, t))
+  const out: Record<number, Phrase[]> = {}
+  for (const r of rows) (out[r.review_id] ??= []).push({ start: r.start_offset, end: r.end_offset })
+  return out
+}
+
+export async function lastDecision(reviewId: number): Promise<{ reason: string; at: string } | null> {
+  const { data, error } = await supabase.from('adjudication_log').select('reason,decided_at').eq('review_id', reviewId).order('decided_at', { ascending: false }).limit(1)
+  if (error) throw error
+  return data?.[0] ? { reason: data[0].reason, at: data[0].decided_at } : null
+}
+
+export async function acceptIdentical(set: SetName, a: string, b: string): Promise<number> {
+  const { data, error } = await supabase.rpc('accept_identical', { p_set: set, p_coder_a: a, p_coder_b: b })
+  if (error) throw error
+  return data as number
+}
+
+export async function saveAdjudication(review: number, a: string, b: string, final: Phrase[], reason: string): Promise<void> {
+  const { error } = await supabase.rpc('save_adjudication', { p_review: review, p_coder_a: a, p_coder_b: b, p_final: final, p_reason: reason })
+  if (error) throw error
+}

@@ -1,6 +1,7 @@
 import { Navigate, Outlet, Route, Routes } from 'react-router-dom'
 import { useAuth } from './auth/AuthProvider'
 import { homeFor, isStaff, type Role } from './auth/roles'
+import Adjudication from './pages/Adjudication'
 import AppShell from './layout/AppShell'
 import Codebook from './pages/Codebook'
 import CoderHome from './pages/CoderHome'
@@ -49,6 +50,7 @@ export default function App() {
           </Route>
           <Route element={<Guard allow={isStaff} />}>
             <Route path="/dashboard" element={<StaffHome />} />
+            <Route path="/adjudicate" element={<Adjudication />} />
           </Route>
           <Route element={<Guard allow={(r) => r === 'expert'} />}>
             <Route path="/expert" element={<ExpertHome />} />
