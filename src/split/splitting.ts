@@ -5,13 +5,28 @@ export type Phrase = { start: number; end: number }
 
 const WS = /\s/u
 
-// shortcut: a "word" is a run of non-whitespace, so punctuation inside a run ("AC-nya", "Mr.", "clean.Then")
-// never splits it; upgrade if coders need to split inside such runs.
+const PUNCT = /[.,!?;:…]/u
+const LETTER = /\p{L}/u
+
+// A "word" is a run of non-whitespace, cut where sentence punctuation is glued to a following letter
+// ("clean.Then" -> "clean." + "Then"). Not cut: digits ("4.5"), hyphens ("AC-nya"), and single-letter
+// abbreviations ("e.g.the"). shortcut: "hotel.com" or "a@b.com" also get cut; upgrade if URLs/emails matter.
 function words(cps: string[]): Phrase[] {
   const out: Phrase[] = []
   let s = -1
+  const cut = (i: number) => {
+    if (s < 0 || i <= s || !LETTER.test(cps[i]) || !PUNCT.test(cps[i - 1])) return false
+    let j = i - 1
+    while (j > s && PUNCT.test(cps[j - 1])) j--
+    const abbrev = j - 1 >= s && LETTER.test(cps[j - 1]) && (j - 2 < s || !LETTER.test(cps[j - 2]))
+    return j > s && !abbrev
+  }
   for (let i = 0; i <= cps.length; i++) {
     const ws = i === cps.length || WS.test(cps[i])
+    if (!ws && s >= 0 && cut(i)) {
+      out.push({ start: s, end: i })
+      s = i
+    }
     if (!ws && s < 0) s = i
     if (ws && s >= 0) {
       out.push({ start: s, end: i })

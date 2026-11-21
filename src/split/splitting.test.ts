@@ -66,6 +66,28 @@ describe('snapSelection', () => {
   })
 })
 
+describe('glued punctuation', () => {
+  it('splits "clean.Then" and "clean,then" into phrases', () => {
+    const a = 'Room was clean.Then we left.'
+    expect(snapSelection(a, 0, 15)).toEqual({ start: 0, end: 15 })
+    expect(snapSelection(a, 15, 28)).toEqual({ start: 15, end: 28 })
+    const b = 'Room was clean,then we left.'
+    expect(snapSelection(b, 0, 15)).toEqual({ start: 0, end: 15 })
+    expect(isComplete(b, [{ start: 0, end: 15 }])).toBe(false)
+    expect(isComplete(b, [{ start: 0, end: 15 }, { start: 15, end: 28 }])).toBe(true)
+  })
+
+  it('keeps decimals, hyphens and abbreviations whole', () => {
+    expect(snapSelection('Rated 4.5 stars', 6, 7)).toEqual({ start: 6, end: 9 })
+    expect(snapSelection('AC-nya mati', 0, 2)).toEqual({ start: 0, end: 6 })
+    expect(snapSelection('e.g.the pool', 0, 1)).toEqual({ start: 0, end: 7 })
+  })
+
+  it('cuts after a run like "..."', () => {
+    expect(snapSelection('ok...Then go', 0, 2)).toEqual({ start: 0, end: 5 })
+  })
+})
+
 describe('addPhrase', () => {
   it('keeps phrases ordered and rejects overlap', () => {
     const a = addPhrase([], { start: 16, end: 26 })
