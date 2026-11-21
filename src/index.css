@@ -216,3 +216,17 @@ mark.m5 { background: var(--m5); }
 .reason { display: flex; flex-direction: column; gap: 0.3rem; font-weight: 700; margin: 1rem 0; max-width: 40rem; }
 .reason textarea { font-weight: 400; }
 @media (max-width: 52rem) { .adj-grid { grid-template-columns: 1fr; } }
+
+/* labelling */
+.phrase.faint { background: rgb(28 38 48 / 0.07); }
+.lcards { list-style: none; padding: 0; margin: 0 0 1.2rem; display: grid; gap: 0.8rem; }
+.lcards > li { padding: 0.9rem 1.1rem; border-radius: 8px; border: 2px solid transparent; }
+.lcards > li.on { border-color: var(--ink); }
+.ltxt { margin: 0 0 0.6rem; font: 400 1.15rem/1.5 var(--read); white-space: pre-wrap; overflow-wrap: anywhere; }
+.ltxt .num { font: 700 1rem var(--ui); margin-right: 0.7rem; }
+.lcards fieldset { border: 0; padding: 0; margin: 0.4rem 0 0; display: flex; flex-wrap: wrap; gap: 0.35rem; align-items: center; }
+.lcards legend { float: left; width: 5.5rem; padding: 0; font-weight: 700; font-size: 0.9rem; }
+.chip { display: inline-flex; align-items: center; padding: 0.4em 0.75em; border: 1.5px solid var(--ink-soft); border-radius: 999px; background: rgb(255 255 255 / 0.65); font: 400 0.95rem/1.2 var(--ui); cursor: pointer; }
+.chip input { position: absolute; opacity: 0; width: 1px; height: 1px; }
+.chip:has(input:focus-visible) { outline: 3px solid var(--action); outline-offset: 2px; }
+.chip.on { background: var(--ink); border-color: var(--ink); color: #fff; font-weight: 700; }

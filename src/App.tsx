@@ -8,6 +8,8 @@ import CoderHome from './pages/CoderHome'
 import { ExpertHome } from './pages/Homes'
 import StaffHome from './pages/StaffHome'
 import SplitScreen from './pages/SplitScreen'
+import LabelHome from './pages/LabelHome'
+import LabelScreen from './pages/LabelScreen'
 import Login from './pages/Login'
 
 function Splash({ children }: { children: string }) {
@@ -47,6 +49,8 @@ export default function App() {
           <Route element={<Guard allow={(r) => r === 'coder'} />}>
             <Route path="/split" element={<CoderHome />} />
             <Route path="/split/:set" element={<SplitScreen />} />
+            <Route path="/label" element={<LabelHome />} />
+            <Route path="/label/:set" element={<LabelScreen />} />
           </Route>
           <Route element={<Guard allow={isStaff} />}>
             <Route path="/dashboard" element={<StaffHome />} />

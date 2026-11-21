@@ -16,6 +16,9 @@ export default function AppShell() {
         </div>
         <nav aria-label="Main">
           <NavLink to={home} className={({ isActive }) => (isActive ? 'navlink active' : 'navlink')}>{homeLabel}</NavLink>
+          {profile.role === 'coder' && (
+            <NavLink to="/label" className={({ isActive }) => (isActive ? 'navlink active' : 'navlink')}>Labelling</NavLink>
+          )}
           {isStaff(profile.role) && (
             <NavLink to="/adjudicate" className={({ isActive }) => (isActive ? 'navlink active' : 'navlink')}>Adjudication</NavLink>
           )}
