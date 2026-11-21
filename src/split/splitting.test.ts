@@ -109,6 +109,18 @@ describe('emoji (codebook rule)', () => {
   })
 })
 
+describe('text emoticons', () => {
+  it('splits "stay:)thank" after the emoticon, which stays with the word before', () => {
+    const t = 'Great stay:)thank you'
+    expect(snapSelection(t, 0, 12)).toEqual({ start: 0, end: 12 })
+    expect(snapSelection(t, 12, 21)).toEqual({ start: 12, end: 21 })
+    expect(snapSelection('stay :-(sad', 5, 8)).toEqual({ start: 5, end: 8 })
+  })
+  it('does not cut a bracket that is not an emoticon', () => {
+    expect(snapSelection('good(ish)stay', 0, 2)).toEqual({ start: 0, end: 13 })
+  })
+})
+
 describe('addPhrase', () => {
   it('keeps phrases ordered and rejects overlap', () => {
     const a = addPhrase([], { start: 16, end: 26 })

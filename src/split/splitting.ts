@@ -7,6 +7,9 @@ const WS = /\s/u
 
 const PUNCT = /[.,!?;:…]/u
 const LETTER = /\p{L}/u
+// Text emoticons count like emoji. Only symbol-ending ones (":)", ":-(", ";)", "=)", "<3", "^_^"): ":D" or ":P" would
+// cut "Note:Dont" wrongly. shortcut: add more only if real reviews need them.
+const EMOTICON = /(?:[:;=][-']?[)(]|<3|\^_?\^)$/
 // Emoji components. A ZWJ joins two emoji into one, so a cut never follows it.
 const EMOJI = /[\p{Extended_Pictographic}\p{Emoji_Modifier}\u{1F1E6}-\u{1F1FF}\ufe0f]/u
 
@@ -19,6 +22,7 @@ function words(cps: string[]): Phrase[] {
   const cut = (i: number) => {
     if (s < 0 || i <= s || !LETTER.test(cps[i])) return false
     if (EMOJI.test(cps[i - 1])) return true // "life 🥰thank": an emoji ends its clause (codebook: emojis)
+    if (EMOTICON.test(cps.slice(Math.max(s, i - 4), i).join(''))) return true
     if (!PUNCT.test(cps[i - 1])) return false
     let j = i - 1
     while (j > s && PUNCT.test(cps[j - 1])) j--

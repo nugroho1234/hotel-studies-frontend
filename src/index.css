@@ -187,3 +187,13 @@ mark.m5 { background: var(--m5); }
 .cards .txt { flex: 1; font: 400 1.1rem/1.5 var(--read); white-space: pre-wrap; overflow-wrap: anywhere; }
 .actions { display: flex; flex-wrap: wrap; gap: 0.6rem; }
 .actions .grow { flex: 1; }
+
+/* staff overview */
+.staff { max-width: 70rem; }
+.staff h2 { margin-top: 2.2rem; }
+.staff h3 { margin: 1.6rem 0 0.4rem; font-size: 1.05rem; }
+.note { color: var(--ink-soft); max-width: 68ch; }
+.stats { border-collapse: collapse; font-size: 0.95rem; min-width: 40rem; }
+.stats th, .stats td { text-align: left; padding: 0.55em 0.9em; border-bottom: 1px solid var(--line); white-space: nowrap; }
+.stats thead th { border-bottom: 2px solid var(--ink); }
+.stats td .btn.quiet { margin-left: 0.6em; font-size: 0.9rem; }
