@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { SETS, finishSet, loadQueue, saveSplits, type QueueItem, type SetName } from '../split/api'
-import { addPhrase, isComplete, phraseText, snapSelection, uncoveredWords, utf16ToCodePoint, type Phrase } from '../split/splitting'
+import { addPhrase, hasContent, isComplete, phraseText, snapSelection, uncoveredWords, utf16ToCodePoint, type Phrase } from '../split/splitting'
 
 type Save = 'saved' | 'saving' | 'error'
 
@@ -74,6 +74,8 @@ export default function SplitScreen() {
       sel.removeAllRanges()
       const p = snapSelection(item.body, a, b)
       if (!p) return setNote('')
+      if (!hasContent(item.body, p) && /[\p{L}\p{N}]/u.test(item.body))
+        return setNote('A phrase needs at least one word. Emoji and punctuation go with the phrase before them (or after, at the start).')
       const next = addPhrase(cur, p)
       if (!next) return setNote('That overlaps a phrase you already marked. Delete that phrase first.')
       setNote('')

@@ -33,6 +33,13 @@ Within a sentence, if none of S2 to S4 applies, do not split. In particular:
 
 If a phrase still mixes praise and criticism, or two aspects, it has not been split far enough. Flag it as a wrong split in Stage 2.
 
+## Emojis
+
+- Emojis are part of the text. Do not delete them.
+- An emoji stays with the phrase before it, like punctuation. An emoji at the very start of a review stays with the phrase after it. An emoji is never a phrase on its own.
+- An emoji counts as a sentence end when a new clause follows it, even with no space or full stop. "…life 🥰thank you" is split as "…life 🥰 | thank you". An emoji inside a clause ("The pool 😍 was amazing") does not end the sentence.
+- In labelling, an emoji can inform the sentiment of its phrase, especially for sarcasm: "Great service 🙄" is negative.
+
 ## Examples
 
 A vertical bar marks a split. Labels and sentiments are assigned in Stage 2 and are shown here for reference.

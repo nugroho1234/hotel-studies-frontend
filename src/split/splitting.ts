@@ -7,6 +7,8 @@ const WS = /\s/u
 
 const PUNCT = /[.,!?;:…]/u
 const LETTER = /\p{L}/u
+// Emoji components. A ZWJ joins two emoji into one, so a cut never follows it.
+const EMOJI = /[\p{Extended_Pictographic}\p{Emoji_Modifier}\u{1F1E6}-\u{1F1FF}\ufe0f]/u
 
 // A "word" is a run of non-whitespace, cut where sentence punctuation is glued to a following letter
 // ("clean.Then" -> "clean." + "Then"). Not cut: digits ("4.5"), hyphens ("AC-nya"), and single-letter
@@ -15,7 +17,9 @@ function words(cps: string[]): Phrase[] {
   const out: Phrase[] = []
   let s = -1
   const cut = (i: number) => {
-    if (s < 0 || i <= s || !LETTER.test(cps[i]) || !PUNCT.test(cps[i - 1])) return false
+    if (s < 0 || i <= s || !LETTER.test(cps[i])) return false
+    if (EMOJI.test(cps[i - 1])) return true // "life 🥰thank": an emoji ends its clause (codebook: emojis)
+    if (!PUNCT.test(cps[i - 1])) return false
     let j = i - 1
     while (j > s && PUNCT.test(cps[j - 1])) j--
     const abbrev = j - 1 >= s && LETTER.test(cps[j - 1]) && (j - 2 < s || !LETTER.test(cps[j - 2]))
@@ -64,6 +68,11 @@ export function phraseText(text: string, p: Phrase): string {
 /** Words not inside any phrase. */
 export function uncoveredWords(text: string, phrases: Phrase[]): Phrase[] {
   return words(Array.from(text)).filter((w) => !phrases.some((p) => p.start <= w.start && w.end <= p.end))
+}
+
+/** True if the phrase holds a letter or digit. Emoji and punctuation alone are never a phrase (codebook). */
+export function hasContent(text: string, p: Phrase): boolean {
+  return /[\p{L}\p{N}]/u.test(phraseText(text, p))
 }
 
 /** Every word covered; a review with no words can never be complete. */

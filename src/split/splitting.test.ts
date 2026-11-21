@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import {
   addPhrase,
+  hasContent,
   isComplete,
   phraseText,
   snapSelection,
@@ -85,6 +86,26 @@ describe('glued punctuation', () => {
 
   it('cuts after a run like "..."', () => {
     expect(snapSelection('ok...Then go', 0, 2)).toEqual({ start: 0, end: 5 })
+  })
+})
+
+describe('emoji (codebook rule)', () => {
+  const t = 'Good life 🥰thank you'
+  it('splits an emoji from a letter glued after it', () => {
+    expect(snapSelection(t, 0, 11)).toEqual({ start: 0, end: 11 })
+    expect(snapSelection(t, 11, 20)).toEqual({ start: 11, end: 20 })
+  })
+  it('handles skin-tone and variation-selector emoji', () => {
+    expect(snapSelection('👍🏽thanks', 0, 1)).toEqual({ start: 0, end: 2 })
+    expect(snapSelection('❤️thanks', 0, 1)).toEqual({ start: 0, end: 2 })
+  })
+  it('does not cut inside a ZWJ emoji or before a space', () => {
+    expect(snapSelection('👨\u200d👩 ok', 0, 1)).toEqual({ start: 0, end: 3 })
+  })
+  it('an emoji or punctuation alone is not a phrase', () => {
+    expect(hasContent('Nice 😍 room', { start: 5, end: 6 })).toBe(false)
+    expect(hasContent('Nice . room', { start: 5, end: 6 })).toBe(false)
+    expect(hasContent('Nice 😍 room', { start: 0, end: 6 })).toBe(true)
   })
 })
 
