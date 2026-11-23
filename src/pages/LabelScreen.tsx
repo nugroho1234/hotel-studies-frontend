@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
+import { setNotGuest } from '../label/notGuest'
 import { LABEL_SETS, finishLabels, loadLabelQueue, saveLabel, type LabelPhrase, type LabelReview, type LabelSet } from '../label/api'
 import { DIMENSIONS, SENTIMENTS, type Dimension, type Sentiment } from '../label/scheme'
 import { segmentsOf } from '../split/splitting'
@@ -42,6 +43,16 @@ export default function LabelScreen() {
       .then(() => { if (--pending.current === 0) setSave('saved') })
       .catch(() => { pending.current--; setSave('error') })
   }, [])
+
+  const tick = (rev: LabelReview, flag: boolean) => {
+    setItems((all) => all && all.map((r) => (r.reviewId === rev.reviewId ? { ...r, notGuest: flag } : r)))
+    setSave('saving')
+    pending.current++
+    chain.current = chain.current
+      .then(() => setNotGuest(rev.reviewId, flag))
+      .then(() => { if (--pending.current === 0) setSave('saved') })
+      .catch(() => { pending.current--; setSave('error') })
+  }
 
   const choose = (rev: LabelReview, p: LabelPhrase, patch: Partial<Pick<LabelPhrase, 'dimension' | 'sentiment'>>) => {
     const next = { ...p, ...patch }
@@ -91,6 +102,8 @@ export default function LabelScreen() {
           </span>
         ))}
       </p>
+
+      <label className="check"><input type="checkbox" checked={rev.notGuest} onChange={(e) => tick(rev, e.target.checked)} /> This reviewer did not stay at the hotel (delivery, job applicant, supplier, restaurant, spa or day visitor)</label>
 
       <div className="status" role="status" aria-live="polite">
         <span className={reviewDone(rev) ? 'ok' : ''}>{reviewDone(rev) ? 'Every phrase is labelled.' : `${rev.phrases.filter((p) => !labelled(p)).length} of ${rev.phrases.length} phrases still need a label and a sentiment.`}</span>

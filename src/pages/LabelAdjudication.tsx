@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { DIMENSIONS, SENTIMENTS } from '../label/scheme'
+import NotGuestPanel from './NotGuestPanel'
 import { segmentsOf } from '../split/splitting'
 import { acceptIdenticalLabels, devRoundStatus, lastLabelDecision, loadStaffData, reconfirmAllGold, reconfirmGold, saveLabelAdjudication, type Lab, type StaffData } from '../stats/api'
 
@@ -193,6 +194,8 @@ export default function LabelAdjudication() {
           )}
         </div>
       </div>
+
+      <NotGuestPanel set={set} a={a} b={b} />
     </section>
   )
 }
