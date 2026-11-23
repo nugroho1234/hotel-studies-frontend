@@ -51,7 +51,12 @@ export default function LabelScreen() {
     chain.current = chain.current
       .then(() => setNotGuest(rev.reviewId, flag))
       .then(() => { if (--pending.current === 0) setSave('saved') })
-      .catch(() => { pending.current--; setSave('error') })
+      .catch(() => {
+        pending.current--
+        setItems((all) => all && all.map((r) => (r.reviewId === rev.reviewId ? { ...r, notGuest: !flag } : r)))
+        if (pending.current === 0) setSave('saved') // the tick is undone, so nothing is unsaved
+        setNote('The tick was not saved. Try again.')
+      })
   }
 
   const choose = (rev: LabelReview, p: LabelPhrase, patch: Partial<Pick<LabelPhrase, 'dimension' | 'sentiment'>>) => {
