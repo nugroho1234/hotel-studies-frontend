@@ -46,16 +46,16 @@ A vertical bar marks a split. Labels and sentiments are assigned in Stage 2 and 
 
 | Review text | Phrases | Rule | Codes |
 |---|---|---|---|
-| The staff is warm and friendly. | The staff is warm and friendly. | No split | ASS positive |
-| Friendly and polite staff. | Friendly and polite staff. | No split | ASS positive |
+| The staff is warm and friendly. | The staff is warm and friendly. | No split | ASR positive |
+| Friendly and polite staff. | Friendly and polite staff. | No split | ASR positive |
 | The bed and pillows were very comfortable. | The bed and pillows were very comfortable. | No split | TAN positive |
 | Breakfast at the rooftop restaurant was delicious. | Breakfast at the rooftop restaurant was delicious. | No split | FNB positive |
 | The room was clean but the AC was noisy. | The room was clean \| but the AC was noisy. | S2, S4 | TAN positive, TAN negative |
 | The room is old but clean. | The room is old \| but clean. | S2, S4 | TAN negative, TAN positive |
-| Stafnya ramah tapi lambat. | Stafnya ramah \| tapi lambat. | S2, S3 | ASS positive, RES negative |
-| Friendly and helpful staff. | Friendly \| and helpful staff. | S3 | ASS positive, RES positive |
-| The staff is friendly and quick to respond to my complaints. | The staff is friendly \| and quick to respond to my complaints. | S3 | ASS positive, RES positive |
-| Staff were friendly, helpful and professional. | Staff were friendly, \| helpful \| and professional. | S3 | ASS positive, RES positive, ASS positive |
+| Stafnya ramah tapi lambat. | Stafnya ramah \| tapi lambat. | S2, S3 | ASR positive, RES negative |
+| Friendly and helpful staff. | Friendly \| and helpful staff. | S3 | ASR positive, RES positive |
+| The staff is friendly and quick to respond to my complaints. | The staff is friendly \| and quick to respond to my complaints. | S3 | ASR positive, RES positive |
+| Staff were friendly, helpful and professional. | Staff were friendly, \| helpful \| and professional. | S3 | ASR positive, RES positive, ASR positive |
 | Kamar bersih, sarapan enak, lokasi strategis. | Kamar bersih, \| sarapan enak, \| lokasi strategis. | S3 | TAN positive, FNB positive, LOC positive |
 | The service and food are excellent. | The service \| and food are excellent. | S3 | GEN positive, FNB positive |
 | We had an issue with the key card, but they fixed it within minutes. | We had an issue with the key card, \| but they fixed it within minutes. | S2, S3 | TAN negative, RES positive |

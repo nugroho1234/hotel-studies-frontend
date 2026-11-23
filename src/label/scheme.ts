@@ -3,7 +3,7 @@ export const DIMENSIONS = [
   { code: 'TAN', name: 'Tangibles' },
   { code: 'REL', name: 'Reliability' },
   { code: 'RES', name: 'Responsiveness' },
-  { code: 'ASS', name: 'Assurance' },
+  { code: 'ASR', name: 'Assurance' },
   { code: 'EMP', name: 'Empathy' },
   { code: 'VAL', name: 'Value' },
   { code: 'LOC', name: 'Location' },
