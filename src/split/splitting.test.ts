@@ -1,7 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import {
   addPhrase,
-  hasContent,
   isComplete,
   phraseText,
   sameSplit,
@@ -83,7 +82,7 @@ describe('glued punctuation', () => {
   it('keeps decimals, hyphens and abbreviations whole', () => {
     expect(snapSelection('Rated 4.5 stars', 6, 7)).toEqual({ start: 6, end: 9 })
     expect(snapSelection('AC-nya mati', 0, 2)).toEqual({ start: 0, end: 6 })
-    expect(snapSelection('e.g.the pool', 0, 1)).toEqual({ start: 0, end: 7 })
+    expect(snapSelection('e.g.the pool', 0, 1)).toEqual({ start: 0, end: 2 }) // v0.2 tokeniser: no abbreviation exception
   })
 
   it('cuts after a run like "..."', () => {
@@ -104,10 +103,17 @@ describe('emoji (codebook rule)', () => {
   it('does not cut inside a ZWJ emoji or before a space', () => {
     expect(snapSelection('👨\u200d👩 ok', 0, 1)).toEqual({ start: 0, end: 3 })
   })
-  it('an emoji or punctuation alone is not a phrase', () => {
-    expect(hasContent('Nice 😍 room', { start: 5, end: 6 })).toBe(false)
-    expect(hasContent('Nice . room', { start: 5, end: 6 })).toBe(false)
-    expect(hasContent('Nice 😍 room', { start: 0, end: 6 })).toBe(true)
+  it('an emoji alone can be a phrase (v0.2)', () => {
+    expect(snapSelection('Nice 😍 room', 5, 6)).toEqual({ start: 5, end: 6 })
+  })
+  it('keeps an emoji run whole, even with spaces inside it', () => {
+    expect(snapSelection('Nice 😍 😍 room', 5, 6)).toEqual({ start: 5, end: 8 })
+  })
+  it('keeps ZWJ family, flag and keycap emoji whole', () => {
+    expect(snapSelection('a 👨‍👩‍👧 b', 2, 3)).toEqual({ start: 2, end: 7 })
+    expect(snapSelection('a 🇮🇩 b', 2, 3)).toEqual({ start: 2, end: 4 })
+    expect(snapSelection('a 1️⃣ b', 2, 3)).toEqual({ start: 2, end: 5 })
+    expect(snapSelection('Nice1️⃣Great', 0, 3)).toEqual({ start: 0, end: 7 })
   })
 })
 
@@ -116,10 +122,10 @@ describe('text emoticons', () => {
     const t = 'Great stay:)thank you'
     expect(snapSelection(t, 0, 12)).toEqual({ start: 0, end: 12 })
     expect(snapSelection(t, 12, 21)).toEqual({ start: 12, end: 21 })
-    expect(snapSelection('stay :-(sad', 5, 8)).toEqual({ start: 5, end: 8 })
+    expect(snapSelection('stay :-(sad', 5, 8)).toEqual({ start: 0, end: 8 }) // punctuation-only token joins the word before
   })
-  it('does not cut a bracket that is not an emoticon', () => {
-    expect(snapSelection('good(ish)stay', 0, 2)).toEqual({ start: 0, end: 13 })
+  it('cuts after a closing bracket before a letter (v0.2 end punctuation)', () => {
+    expect(snapSelection('good(ish)stay', 0, 2)).toEqual({ start: 0, end: 9 })
   })
 })
 
@@ -167,5 +173,30 @@ describe('segmentsOf and sameSplit', () => {
   it('compares splits regardless of order', () => {
     expect(sameSplit([{ start: 16, end: 26 }, { start: 0, end: 15 }], [{ start: 0, end: 15 }, { start: 16, end: 26 }])).toBe(true)
     expect(sameSplit([{ start: 0, end: 26 }], [{ start: 0, end: 15 }, { start: 16, end: 26 }])).toBe(false)
+  })
+})
+
+describe('v0.2 tokeniser cases', () => {
+  const cut = (t: string, sel: [number, number][]) => sel.map(([a, b]) => snapSelection(t, a, b))
+  it('case 6: emoji glued after a full stop is its own phrase', () => {
+    expect(cut('Thank you for the suprise,Hendrik.😁 Great stay!', [[0, 34], [34, 35], [36, 47]]))
+      .toEqual([{ start: 0, end: 34 }, { start: 34, end: 35 }, { start: 36, end: 47 }])
+  })
+  it('case 8: emoji glued before a letter is its own phrase', () => {
+    expect(cut('Thank you for the suprise,Hendrik. 😁Great stay!', [[0, 34], [35, 36], [36, 47]]))
+      .toEqual([{ start: 0, end: 34 }, { start: 35, end: 36 }, { start: 36, end: 47 }])
+  })
+  it('case 9: a double space inside a phrase is kept', () => {
+    expect(cut('Stafnya ramah dan sangat  tanggap.', [[0, 13], [14, 34]])).toEqual([{ start: 0, end: 13 }, { start: 14, end: 34 }])
+    expect(phraseText('Stafnya ramah dan sangat  tanggap.', { start: 14, end: 34 })).toBe('dan sangat  tanggap.')
+  })
+  it('splits lowercase|Uppercase, keeps hashtags and numbers whole', () => {
+    expect(snapSelection('light Kolam', 0, 1)).toEqual({ start: 0, end: 5 })
+    expect(snapSelection('lightKolam', 0, 1)).toEqual({ start: 0, end: 5 })
+    expect(snapSelection('#kolamRenang ok', 0, 1)).toEqual({ start: 0, end: 12 })
+    expect(snapSelection('Rp1.500.000 ok', 0, 1)).toEqual({ start: 0, end: 11 })
+  })
+  it('a lone full stop joins the phrase before it', () => {
+    expect(snapSelection('here .The end', 0, 4)).toEqual({ start: 0, end: 6 })
   })
 })

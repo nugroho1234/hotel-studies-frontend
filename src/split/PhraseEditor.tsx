@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react'
-import { addPhrase, hasContent, isComplete, phraseText, segmentsOf, snapSelection, uncoveredWords, utf16ToCodePoint, type Phrase } from './splitting'
+import { addPhrase, isComplete, phraseText, segmentsOf, snapSelection, uncoveredWords, utf16ToCodePoint, type Phrase } from './splitting'
 
 /** Code-point offset of a DOM selection boundary inside the review element (segments carry data-s). */
 function offsetOf(root: HTMLElement, node: Node, off: number, length: number): number | null {
@@ -59,8 +59,6 @@ export default function PhraseEditor({ body, lang, phrases, onChange, extra }: {
       sel.removeAllRanges()
       const p = snapSelection(body, a, b)
       if (!p) return setNote('')
-      if (!hasContent(body, p) && /[\p{L}\p{N}]/u.test(body))
-        return setNote('A phrase needs at least one word. Emoji and punctuation go with the phrase before them (or after, at the start).')
       const next = addPhrase(phrases, p)
       if (!next) return setNote('That overlaps a phrase you already marked. Delete that phrase first.')
       setNote('')

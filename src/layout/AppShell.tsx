@@ -20,7 +20,10 @@ export default function AppShell() {
             <NavLink to="/label" className={({ isActive }) => (isActive ? 'navlink active' : 'navlink')}>Labelling</NavLink>
           )}
           {profile.role === 'lead' && (
+            <>
             <NavLink to="/adjudicate" className={({ isActive }) => (isActive ? 'navlink active' : 'navlink')}>Adjudication</NavLink>
+            <NavLink to="/eligibility" className={({ isActive }) => (isActive ? 'navlink active' : 'navlink')}>Eligibility</NavLink>
+            </>
           )}
           {profile.role !== 'expert' && (
             <a className="navlink" href="/codebook" target="_blank" rel="noopener noreferrer">

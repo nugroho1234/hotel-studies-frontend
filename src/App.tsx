@@ -3,6 +3,7 @@ import { useAuth } from './auth/AuthProvider'
 import { homeFor, isStaff, type Role } from './auth/roles'
 import Adjudication from './pages/Adjudication'
 import AppShell from './layout/AppShell'
+import EligibilityAdjudication from './pages/EligibilityAdjudication'
 import Codebook from './pages/Codebook'
 import CoderHome from './pages/CoderHome'
 import { ExpertHome } from './pages/Homes'
@@ -57,6 +58,7 @@ export default function App() {
           </Route>
           <Route element={<Guard allow={(r) => r === 'lead'} />}>
             <Route path="/adjudicate" element={<Adjudication />} />
+            <Route path="/eligibility" element={<EligibilityAdjudication />} />
           </Route>
           <Route element={<Guard allow={(r) => r === 'expert'} />}>
             <Route path="/expert" element={<ExpertHome />} />
