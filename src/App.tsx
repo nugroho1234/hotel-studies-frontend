@@ -12,6 +12,7 @@ import SplitScreen from './pages/SplitScreen'
 import LabelHome from './pages/LabelHome'
 import LabelScreen from './pages/LabelScreen'
 import Login from './pages/Login'
+import TrainingView from './pages/TrainingView'
 
 function Splash({ children }: { children: string }) {
   return <p className="splash">{children}</p>
@@ -52,6 +53,7 @@ export default function App() {
             <Route path="/split/:set" element={<SplitScreen />} />
             <Route path="/label" element={<LabelHome />} />
             <Route path="/label/:set" element={<LabelScreen />} />
+            <Route path="/practice" element={<LabelScreen practice />} />
           </Route>
           <Route element={<Guard allow={isStaff} />}>
             <Route path="/dashboard" element={<StaffHome />} />
@@ -59,6 +61,7 @@ export default function App() {
           <Route element={<Guard allow={(r) => r === 'lead'} />}>
             <Route path="/adjudicate" element={<Adjudication />} />
             <Route path="/eligibility" element={<EligibilityAdjudication />} />
+            <Route path="/training" element={<TrainingView />} />
           </Route>
           <Route element={<Guard allow={(r) => r === 'expert'} />}>
             <Route path="/expert" element={<ExpertHome />} />

@@ -244,3 +244,4 @@ mark.m5 { background: var(--m5); }
 .upload summary { cursor: pointer; font-weight: 600; }
 .upload label, .versions { display: grid; gap: 0.25rem; margin: 0.75rem 0; }
 .versions { margin-top: 1rem; }
+.row { display: flex; gap: 0.75rem; align-items: center; flex-wrap: wrap; }

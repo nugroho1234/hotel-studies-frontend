@@ -23,6 +23,7 @@ export default function AppShell() {
             <>
             <NavLink to="/adjudicate" className={({ isActive }) => (isActive ? 'navlink active' : 'navlink')}>Adjudication</NavLink>
             <NavLink to="/eligibility" className={({ isActive }) => (isActive ? 'navlink active' : 'navlink')}>Eligibility</NavLink>
+            <NavLink to="/training" className={({ isActive }) => (isActive ? 'navlink active' : 'navlink')}>Training</NavLink>
             </>
           )}
           {profile.role !== 'expert' && (

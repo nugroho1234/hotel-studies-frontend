@@ -23,7 +23,7 @@ export default function CoderHome() {
               <strong>{s.label}</strong>
               <span>{s.hint}</span>
             </div>
-            {open[s.name] ? <Link className="btn" to={`/split/${s.name}`}>Open</Link> : <span className="locked">Not open yet</span>}
+            {open[s.name] ? <span className="row"><Link className="btn" to={`/split/${s.name}`}>Open</Link>{s.name === 'training' && <Link className="btn" to="/practice">Practise labelling</Link>}</span> : <span className="locked">Not open yet</span>}
           </li>
         ))}
       </ul>

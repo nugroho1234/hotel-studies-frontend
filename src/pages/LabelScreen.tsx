@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { setNotGuest } from '../label/notGuest'
-import { LABEL_SETS, finishLabels, loadLabelQueue, saveLabel, type LabelPhrase, type LabelReview, type LabelSet } from '../label/api'
+import { LABEL_SETS, finishLabels, loadLabelQueue, loadTrainingQueue, saveLabel, saveTrainingLabel, type LabelPhrase, type LabelReview, type LabelSet } from '../label/api'
 import { DIMENSIONS, SENTIMENTS, type Dimension, type Sentiment } from '../label/scheme'
 import { segmentsOf } from '../split/splitting'
 
@@ -9,9 +9,10 @@ type Save = 'saved' | 'saving' | 'error'
 const labelled = (p: LabelPhrase) => p.dimension !== null && p.sentiment !== null
 const reviewDone = (r: LabelReview) => r.phrases.every(labelled)
 
-export default function LabelScreen() {
+/** practice: the training set, labelling the coder's own phrases; nothing is adjudicated or locked and nothing counts. */
+export default function LabelScreen({ practice = false }: { practice?: boolean }) {
   const set = useParams().set as LabelSet
-  const label = LABEL_SETS.find((s) => s.name === set)?.label
+  const label = practice ? 'Training practice' : LABEL_SETS.find((s) => s.name === set)?.label
   const [items, setItems] = useState<LabelReview[] | null>(null)
   const [idx, setIdx] = useState(0)
   const [active, setActive] = useState(0)
@@ -24,25 +25,25 @@ export default function LabelScreen() {
 
   useEffect(() => {
     if (!label) return
-    loadLabelQueue(set).then(
+    (practice ? loadTrainingQueue() : loadLabelQueue(set)).then(
       (rs) => {
         setItems(rs)
         setDone(rs.length > 0 && rs.every((r) => r.finished))
         const first = rs.findIndex((r) => !reviewDone(r))
         setIdx(first < 0 ? 0 : first)
       },
-      (e) => setLoadErr(e?.message?.includes('not open') ? 'Labelling of this set is not open yet.' : 'Could not load this set. Reload the page to try again.'),
+      (e) => setLoadErr(e?.message?.includes('not open') ? (practice ? 'The training set is not open yet.' : 'Labelling of this set is not open yet.') : 'Could not load this set. Reload the page to try again.'),
     )
-  }, [set, label])
+  }, [set, label, practice])
 
-  const persist = useCallback((phraseId: number, d: Dimension, s: Sentiment) => {
+  const persist = useCallback((rev: LabelReview, p: LabelPhrase, d: Dimension, s: Sentiment) => {
     setSave('saving')
     pending.current++
     chain.current = chain.current
-      .then(() => saveLabel(phraseId, d, s))
+      .then(() => (practice ? saveTrainingLabel(rev.reviewId, p.start, p.end, d, s) : saveLabel(p.id, d, s)))
       .then(() => { if (--pending.current === 0) setSave('saved') })
       .catch(() => { pending.current--; setSave('error') })
-  }, [])
+  }, [practice])
 
   const tick = (rev: LabelReview, flag: boolean) => {
     setItems((all) => all && all.map((r) => (r.reviewId === rev.reviewId ? { ...r, notGuest: flag } : r)))
@@ -62,13 +63,13 @@ export default function LabelScreen() {
   const choose = (rev: LabelReview, p: LabelPhrase, patch: Partial<Pick<LabelPhrase, 'dimension' | 'sentiment'>>) => {
     const next = { ...p, ...patch }
     setItems((all) => all && all.map((r) => (r.reviewId !== rev.reviewId ? r : { ...r, phrases: r.phrases.map((q) => (q.id === p.id ? next : q)) })))
-    if (next.dimension && next.sentiment) persist(p.id, next.dimension, next.sentiment)
+    if (next.dimension && next.sentiment) persist(rev, p, next.dimension, next.sentiment)
   }
 
   if (!label) return <p className="error">Unknown set.</p>
-  if (loadErr) return <section className="page"><p role="alert" className="error">{loadErr}</p><Link to="/label">Back to the sets</Link></section>
+  if (loadErr) return <section className="page"><p role="alert" className="error">{loadErr}</p><Link to={practice ? '/split' : '/label'}>Back to the sets</Link></section>
   if (!items) return <p>Loading…</p>
-  if (items.length === 0) return <section className="page"><h1>{label}</h1><p>This set has no reviews to label.</p></section>
+  if (items.length === 0) return <section className="page"><h1>{label}</h1><p>{practice ? 'Nothing to label yet. Split a training review completely on the Splitting page first; it then appears here.' : 'This set has no reviews to label.'}</p>{practice && <Link to="/split">Back to splitting</Link>}</section>
   if (done)
     return (
       <section className="page">
@@ -98,7 +99,7 @@ export default function LabelScreen() {
         <a href="/codebook" target="_blank" rel="noopener noreferrer">Codebook<span className="sr-only"> (opens in a new tab)</span></a>
       </header>
 
-      <p className="instruction">Choose one label and one sentiment for each phrase. The phrase you are labelling is highlighted in the review.</p>
+      <p className="instruction">Choose one label and one sentiment for each phrase. The phrase you are labelling is highlighted in the review.{practice && ' This is practice: your phrases are labelled directly, nothing is checked or counted, and you can stop at any time.'}</p>
 
       <p className="review small" lang={rev.lang === 'id' ? 'id' : 'en'}>
         {segmentsOf(cps.length, rev.phrases).map((g) => (
@@ -108,7 +109,7 @@ export default function LabelScreen() {
         ))}
       </p>
 
-      <label className="check"><input type="checkbox" checked={rev.notGuest} onChange={(e) => tick(rev, e.target.checked)} /> This reviewer did not stay at the hotel (delivery, job applicant, supplier, restaurant, spa or day visitor)</label>
+      {!practice && <label className="check"><input type="checkbox" checked={rev.notGuest} onChange={(e) => tick(rev, e.target.checked)} /> This reviewer did not stay at the hotel (delivery, job applicant, supplier, restaurant, spa or day visitor)</label>}
 
       <div className="status" role="status" aria-live="polite">
         <span className={reviewDone(rev) ? 'ok' : ''}>{reviewDone(rev) ? 'Every phrase is labelled.' : `${rev.phrases.filter((p) => !labelled(p)).length} of ${rev.phrases.length} phrases still need a label and a sentiment.`}</span>
@@ -145,19 +146,21 @@ export default function LabelScreen() {
       <div className="actions">
         <button className="btn" disabled={idx === 0 || busy} onClick={() => go(idx - 1)}>Back</button>
         <span className="grow" />
-        {last ? (
+        {last && practice ? (
+          <Link className="btn primary" to="/split">Back to splitting</Link>
+        ) : last ? (
           <button className="btn primary" disabled={busy || todo.length > 0} onClick={finish}>Finish set</button>
         ) : (
           <button className="btn primary" disabled={!reviewDone(rev) || busy} onClick={() => go(idx + 1)}>Next</button>
         )}
       </div>
-      {last && todo.length > 0 && (
+      {last && !practice && todo.length > 0 && (
         <p className="status">
           {todo.length} {todo.length === 1 ? 'review is' : 'reviews are'} not fully labelled.{' '}
           <button className="btn quiet" onClick={() => go(todo[0])}>Go to review {todo[0] + 1}</button>
         </p>
       )}
-      {last && todo.length === 0 && <p className="status">Finishing locks all your labels in this set.</p>}
+      {last && !practice && todo.length === 0 && <p className="status">Finishing locks all your labels in this set.</p>}
     </section>
   )
 }
