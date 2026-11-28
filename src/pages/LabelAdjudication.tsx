@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { DIMENSIONS, SENTIMENTS } from '../label/scheme'
+import { DIMENSIONS, FLAGS, SENTIMENTS } from '../label/scheme'
 import NotGuestPanel from './NotGuestPanel'
 import { segmentsOf } from '../split/splitting'
 import { acceptIdenticalLabels, devRoundStatus, lastLabelDecision, loadStaffData, reconfirmAllGold, reconfirmGold, saveLabelAdjudication, type Lab, type StaffData } from '../stats/api'
@@ -9,7 +9,10 @@ type Filter = 'todo' | 'decided' | 'same' | 'redo'
 const SET_LABEL: Record<SetKey, string> = { dev: 'Development', test: 'Test' }
 const dimName = (c: string) => DIMENSIONS.find((d) => d.code === c)?.name ?? c
 const sentName = (c: string) => SENTIMENTS.find((s) => s.code === c)?.name ?? c
+const flagName = (c: string) => FLAGS.find((f) => f.code === c)?.name ?? c
 const show = (l: Lab) => `${dimName(l.dimension)}, ${sentName(l.sentiment).toLowerCase()}`
+const flagText = (l: Lab) => (l.flags?.length ? l.flags.map(flagName).join(', ') : 'none')
+const flagged = (l: Lab) => !!l.flags?.length
 
 /** The lead decides the gold label of each phrase the two coders labelled differently. */
 export default function LabelAdjudication() {
@@ -138,7 +141,7 @@ export default function LabelAdjudication() {
               <li key={r.p.phraseId}>
                 <button className={r.p.phraseId === sel ? 'item on' : 'item'} onClick={() => choose(r.p.phraseId)}>
                   <span>{Array.from(r.p.text).slice(0, 48).join('')}…</span>
-                  <small>{r.la.dimension} {r.la.sentiment[0].toUpperCase()} vs {r.lb.dimension} {r.lb.sentiment[0].toUpperCase()}</small>
+                  <small>{r.la.dimension} {r.la.sentiment[0].toUpperCase()} vs {r.lb.dimension} {r.lb.sentiment[0].toUpperCase()}{(flagged(r.la) || flagged(r.lb)) && ' · flagged'}</small>
                 </button>
               </li>
             ))}
@@ -154,8 +157,8 @@ export default function LabelAdjudication() {
                   <span key={g.start} className={g.start === cur.p.start ? 'phrase m1' : g.n === null ? 'gap' : 'phrase faint'}>{segs.slice(g.start, g.end).join('')}</span>
                 ))}
               </p>
-              <p><strong>{name(a)}:</strong> {show(cur.la)}</p>
-              <p><strong>{name(b)}:</strong> {show(cur.lb)}</p>
+              <p><strong>{name(a)}:</strong> {show(cur.la)}. Flags: {flagText(cur.la)}</p>
+              <p><strong>{name(b)}:</strong> {show(cur.lb)}. Flags: {flagText(cur.lb)}</p>
 
               <h2 className="who2">Gold label{cur.decided ? (outdated(cur) ? ` (decided under v${d.gold[cur.p.phraseId].version ?? '?'}, confirm under v${cv})` : '') : ' (not saved yet)'}</h2>
               <div className="actions">

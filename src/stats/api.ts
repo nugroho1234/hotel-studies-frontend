@@ -4,7 +4,7 @@ import type { SetName } from '../split/api'
 
 export type Meta = { reviewId: number; lang: string; set: SetName; isSupp: boolean; body: string; round: number | null }
 export type AgreedPhrase = { phraseId: number; reviewId: number; start: number; end: number; text: string }
-export type Lab = { dimension: string; sentiment: string }
+export type Lab = { dimension: string; sentiment: string; flags?: string[] }
 export type Coder = { id: string; name: string }
 export type StaffData = {
   meta: Meta[]
@@ -41,8 +41,8 @@ export async function loadStaffData(): Promise<StaffData> {
     supabase.from('set_access').select('set_name,is_open'),
     all<{ phrase_id: number; review_id: number; start_offset: number; end_offset: number; phrase_text: string }>((f, t) =>
       supabase.from('agreed_phrases').select('phrase_id,review_id,start_offset,end_offset,phrase_text').order('phrase_id').range(f, t)),
-    all<{ phrase_id: number; coder: string; dimension: string; sentiment: string }>((f, t) =>
-      supabase.from('human_labels').select('phrase_id,coder,dimension,sentiment').order('phrase_id').range(f, t)),
+    all<{ phrase_id: number; coder: string; dimension: string; sentiment: string; flags: string[] }>((f, t) =>
+      supabase.from('human_labels').select('phrase_id,coder,dimension,sentiment,flags').order('phrase_id').range(f, t)),
     all<{ review_id: number; coder: string }>((f, t) => supabase.from('label_submissions').select('review_id,coder').order('review_id').range(f, t)),
     supabase.from('label_access').select('set_name,is_open'),
     all<{ phrase_id: number; dimension: string; sentiment: string; by_coders: boolean; codebook_version: string | null }>((f, t) =>
@@ -65,7 +65,7 @@ export async function loadStaffData(): Promise<StaffData> {
     finished: f,
     open: Object.fromEntries((access.data ?? []).map((a) => [a.set_name, a.is_open as boolean])),
     agreedPhrases: agreed.map((r) => ({ phraseId: r.phrase_id, reviewId: r.review_id, start: r.start_offset, end: r.end_offset, text: r.phrase_text })),
-    labels: labs.reduce<StaffData['labels']>((o, r) => ((o[r.coder] ??= {})[r.phrase_id] = { dimension: r.dimension, sentiment: r.sentiment }, o), {}),
+    labels: labs.reduce<StaffData['labels']>((o, r) => ((o[r.coder] ??= {})[r.phrase_id] = { dimension: r.dimension, sentiment: r.sentiment, flags: r.flags }, o), {}),
     labelFinished: lsubs.reduce<StaffData['labelFinished']>((o, r) => ((o[r.coder] ??= {})[r.review_id] = true, o), {}),
     labelOpen: Object.fromEntries((lacc.data ?? []).map((a) => [a.set_name, a.is_open as boolean])),
     gold: Object.fromEntries(gold.map((g) => [g.phrase_id, { dimension: g.dimension, sentiment: g.sentiment, byCoders: g.by_coders, version: g.codebook_version }])),

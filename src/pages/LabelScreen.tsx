@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { setNotGuest } from '../label/notGuest'
 import { LABEL_SETS, finishLabels, loadLabelQueue, loadTrainingQueue, saveLabel, saveTrainingLabel, type LabelPhrase, type LabelReview, type LabelSet } from '../label/api'
-import { DIMENSIONS, SENTIMENTS, type Dimension, type Sentiment } from '../label/scheme'
+import { DIMENSIONS, FLAGS, SENTIMENTS, type Dimension, type Flag, type Sentiment } from '../label/scheme'
 import { segmentsOf } from '../split/splitting'
 
 type Save = 'saved' | 'saving' | 'error'
@@ -32,15 +32,15 @@ export default function LabelScreen({ practice = false }: { practice?: boolean }
         const first = rs.findIndex((r) => !reviewDone(r))
         setIdx(first < 0 ? 0 : first)
       },
-      (e) => setLoadErr(e?.message?.includes('not open') ? (practice ? 'The training set is not open yet.' : 'Labelling of this set is not open yet.') : 'Could not load this set. Reload the page to try again.'),
+      (e) => setLoadErr(e?.message?.includes('coders only') ? 'Only coders can label. You are signed in with a different role; sign in with a coder account.' : e?.message?.includes('not open') ? (practice ? 'The training set is not open yet.' : 'Labelling of this set is not open yet.') : 'Could not load this set. Reload the page to try again.'),
     )
   }, [set, label, practice])
 
-  const persist = useCallback((rev: LabelReview, p: LabelPhrase, d: Dimension, s: Sentiment) => {
+  const persist = useCallback((rev: LabelReview, p: LabelPhrase, d: Dimension, s: Sentiment, f: Flag[]) => {
     setSave('saving')
     pending.current++
     chain.current = chain.current
-      .then(() => (practice ? saveTrainingLabel(rev.reviewId, p.start, p.end, d, s) : saveLabel(p.id, d, s)))
+      .then(() => (practice ? saveTrainingLabel(rev.reviewId, p.start, p.end, d, s, f) : saveLabel(p.id, d, s, f)))
       .then(() => { if (--pending.current === 0) setSave('saved') })
       .catch(() => { pending.current--; setSave('error') })
   }, [practice])
@@ -60,10 +60,10 @@ export default function LabelScreen({ practice = false }: { practice?: boolean }
       })
   }
 
-  const choose = (rev: LabelReview, p: LabelPhrase, patch: Partial<Pick<LabelPhrase, 'dimension' | 'sentiment'>>) => {
+  const choose = (rev: LabelReview, p: LabelPhrase, patch: Partial<Pick<LabelPhrase, 'dimension' | 'sentiment' | 'flags'>>) => {
     const next = { ...p, ...patch }
     setItems((all) => all && all.map((r) => (r.reviewId !== rev.reviewId ? r : { ...r, phrases: r.phrases.map((q) => (q.id === p.id ? next : q)) })))
-    if (next.dimension && next.sentiment) persist(rev, p, next.dimension, next.sentiment)
+    if (next.dimension && next.sentiment) persist(rev, p, next.dimension, next.sentiment, next.flags)
   }
 
   if (!label) return <p className="error">Unknown set.</p>
@@ -135,6 +135,15 @@ export default function LabelScreen({ practice = false }: { practice?: boolean }
                 <label key={s.code} className={p.sentiment === s.code ? `chip on ${s.code}` : 'chip'}>
                   <input type="radio" name={`s${p.id}`} checked={p.sentiment === s.code} onChange={() => choose(rev, p, { sentiment: s.code })} />
                   {s.name}
+                </label>
+              ))}
+            </fieldset>
+            <fieldset>
+              <legend>Flags (optional)</legend>
+              {FLAGS.map((f) => (
+                <label key={f.code} className={p.flags.includes(f.code) ? 'chip on' : 'chip'}>
+                  <input type="checkbox" checked={p.flags.includes(f.code)} onChange={(e) => choose(rev, p, { flags: e.target.checked ? [...p.flags, f.code] : p.flags.filter((x) => x !== f.code) })} />
+                  {f.name}
                 </label>
               ))}
             </fieldset>
